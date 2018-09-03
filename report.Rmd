@@ -1,0 +1,78 @@
+---
+title: 'Análise de Gastos de Deputados: Nossas Perguntas'
+author: "Matheus Freitas"
+date: "27 de agosto de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(plotly)
+
+dados <- read.csv("data/dadosCEAP.csv")
+dados$valorGlosa <- as.numeric(sub(",", ".", dados$valorGlosa, fixed = TRUE)) 
+```
+
+#Os dados
+
+Nesta análise utilizaremos dados coletados no site de transparência da câmara dos deputados que retratam as despesas da CEAP (cota para o exercício da atividade parlamentar). Essa cota é mensal e é destinada para custear gastos exclusivamente vinculados ao exercício da atividade parlamentar como passagens áreas, telefonia, serviços postais e etc.
+
+O data frame contém as seguintes colunas:
+
+  * **nomeParlamentar**: Nome adotado pelo Parlamentar ao tomar posse do seu mandato.
+  * **idCadastro**: Número que identifica unicamente um deputado federal na CD.
+  * **sgUF**: No contexto da cota CEAP, representa a unidade da federação pela qual o deputado foi eleito e é utilizada para definir o valor da cota a que o deputado tem.
+  * **sgPartido**: Sigla do partido do parlamentar.
+  * **tipoDespesa**: O seu conteúdo é a descrição do Tipo de Despesa relativo à despesa em questão.
+  * **especDespesa**: Representa a descrição  especificação mais detalhada de um referido Tipo de Despesa.
+  * **fornecedor**: O conteúdo deste dado representa o nome do fornecedor do produto ou serviço presente no documento fiscal
+  * **CNPJCPF**: O conteúdo deste dado representa o CNPJ ou o CPF do emitente do documento fiscal, quando se tratar do uso da cota em razão do reembolso despesas comprovadas pela emissão de documentos fiscais.
+  * **tipoDocumento**: Este dado representa o tipo de documento do fiscal – 0 (Zero), para Nota Fiscal; 1 (um), para Recibo; e 2, para Despesa no Exterior.
+  * **dataEmissao**: O conteúdo deste dado é a data de emissão do documento fiscal ou a data do documento que tenha dado causa à despesa.
+  * **valorDocumento**: O seu conteúdo é o valor de face do documento fiscal ou o valor do documento que deu causa à despesa. Quando se tratar de bilhete aéreo, esse valor poderá ser negativo, significando que o referido bilhete é um bilhete de compensação, pois compensa um outro bilhete emitido e não utilizado pelo deputado (idem para o dado vlrLiquido abaixo).
+  * **valorGlosa**: O seu conteúdo representa o valor da glosa do documento fiscal que incidirá sobre o Valor do Documento, ou o valor da glosa do documento que deu causa à despesa.
+  * **valorLiquido**: O seu conteúdo representa o valor líquido do documento fiscal ou do documento que deu causa à despesa e será calculado pela diferença entre o Valor do Documento e o Valor da Glosa. É este valor que será debitado da cota do deputado. Caso o débito seja do Tipo Telefonia e o valor seja igual a zero, significa que a despesa foi franqueada.
+
+
+#Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos?
+
+```{r}
+gastos_por_dep <- dados %>%
+  group_by(nomeParlamentar) %>%
+  summarise(valorLíquido = sum(valorLíquido))
+
+plot_ly(data = gastos_por_dep,
+        x = ~nomeParlamentar,
+        y = ~valorLíquido,
+        type = "scatter") %>%
+  layout(xaxis = list(showticklabels = FALSE))
+
+
+
+
+```
+No gráfico acima conseguimos visualizar a resposta da pergunta, os pontos mais elevados representam deputados com gastos maiores, os pontos mais abaixo representam deputados com gastos menores. Podemos visualizar qual deputado é representado por cada ponto ao passar o cursor por cima deste. 
+
+ * Podemos ver que o ponto mais elevado do gráfico é representado pelo deputado Edio Lopes.
+
+#Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior?
+
+```{r}
+gasto_exterior_estado <- dados%>%
+  select(sgUF, tipoDocumento, valorLíquido) %>%
+  group_by(sgUF, tipoDocumento) %>%
+  summarise(valorLíquido = sum(valorLíquido)) %>%
+  filter(tipoDocumento == 2)
+
+p <- ggplot(data = gasto_exterior_estado,
+            mapping = aes(x = sgUF,
+                          y = valorLíquido,
+                          color = sgUF)) +
+  geom_point() 
+
+ggplotly(p)
+```
+ 
+ * Estado com mais gastos no exterior: São Paulo
+ * Estado com menos gastos no exterior: Maranhão
