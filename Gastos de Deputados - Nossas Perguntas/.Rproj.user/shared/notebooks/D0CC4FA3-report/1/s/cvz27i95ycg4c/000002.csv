@@ -1,0 +1,9 @@
+"0","p <- ggplot(data = gasto_partidos,
+            mapping = aes(x = tipoDespesa,
+                          y = valorLiquido)) +
+  geom_bar(stat = ""identity"", nrow = 3) +
+  facet_wrap(~sgPartido) +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) 
+"
+"2","Ignoring unknown parameters: nrow"

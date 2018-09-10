@@ -1,0 +1,10 @@
+"0","plot_ly(data = gastos_medio_partido,
+        x = ~tamanhoPartido,
+        y = ~gastoMedio,
+        color = ~sgPartido,
+        type = ""bar"",
+        width = 5)
+"
+"2","n too large, allowed maximum for palette Set2 is 8
+Returning the palette you asked for with that many colors
+"

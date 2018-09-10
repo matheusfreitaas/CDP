@@ -1,0 +1,12 @@
+"0","p <- ggplot(data = gasto_limite_CEAP,
+            mapping = aes()) +
+  geom_point(aes(x = nomeParlamentar,
+               y = valorLiquido )) +
+  geom_hlin(aes(yintercept = limite_mensal)) +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) + 
+  facet_wrap(~sgUF, ncol = 3)
+"
+"2","Error in geom_hlin(aes(yintercept = limite_mensal)) : 
+  could not find function ""geom_hlin""
+"
