@@ -1,0 +1,296 @@
+---
+title: "Regressão - OLS e Lasso"
+author: "Jacques Sauve"
+date: "1 de fevereiro de 2016"
+output: html_document
+---
+
+```
+No que segue, o texto fora de código R é o texto do laboratório 
+para os alunos e o texto em caixas como esta e em caixas com código R 
+contém comentários e respostas às perguntas.
+```
+
+# Objetivos
+
+- Entender um problema do mundo real e mapeá-lo para um problema de análise de dados
+- Realizar uma análise exploratória de dados
+    + Os dados consistem de 8 preditores e 1 resposta
+    + Obter informação através de visualização gráfica dos dados
+- Aprender a dividir os dados disponíveis para treinamento, tuning e teste
+- Obter um modelo linear simples usando regressão "Ordinary Least Squares"
+- Avaliar a validade do modelo examinando a distribuição de residuais
+- Realizar a seleção de um melhor modelo usando várias técnicas
+    - Seleção progressiva (Forward selection)
+    - Lasso
+- Comparar modelos usando várias medidas (acurácia, R-squared)
+- Otimizar os hiper-parâmetros de um modelo (tuning) usando cross-validação
+
+
+```{r prepare, cache=TRUE, message=FALSE, warning=FALSE}
+# Tratamento de dados para preparar o arquivo de dados para o laboratório
+require(data.table)
+url='http://statweb.stanford.edu/~tibs/ElemStatLearn/datasets/prostate.data'
+pcancer.orig = read.table(url, header=TRUE)
+head(pcancer.orig)
+# campos:
+# vol: volume do cancer
+# idade: idade do paciente
+# hpb: hiperplasia prostática benigna
+# ivs: invasão das vesículas seminais
+# pc: penetração capsular
+# gleason: escore Gleason
+# pgg45: percentagem escore Gleason 4 ou 5
+# psa: antígeno específico da próstata
+pcancer = data.table(vol = exp(pcancer.orig$lcavol),
+           peso = exp(pcancer.orig$lweight),
+           idade = pcancer.orig$age,
+           hpb = exp(pcancer.orig$lbph),
+           ivs = pcancer.orig$svi,
+           pc = exp(pcancer.orig$lcp),
+           gleason = pcancer.orig$gleason,
+           pgg45 = pcancer.orig$pgg45,
+           train = pcancer.orig$train, 
+           psa = exp(pcancer.orig$lpsa)
+)
+head(pcancer)
+write.csv(pcancer, 'cancer_data.csv', row.names = FALSE)
+```
+
+# Exploração dos dados
+
+## Passo 1: Leitura dos dados
+
+Leia os dados [desta URL](https://www.dropbox.com/s/bits0cuskp6kvu4/cancer_data.csv?dl=0).
+
+A documentação dos dados está [aqui](https://www.dropbox.com/s/s85eryah7knrgyv/cancer_data.txt?dl=0).
+
+```{r load, cache=TRUE, message=FALSE, warning=FALSE}
+DATA.FILE = 'cancer_data.csv'
+pcancer = read.csv(DATA.FILE, header=TRUE, quote='"')
+```
+
+## Passo 2: Familiarização 
+
+Examine um histograma de cada variável para se familiarizar com os dados. (R: hist ou histogram ou melt/ggplot/facet_wrap/geom_histogram)
+
+Nosso objetivo final no laboratório será predizer `psa` a partir dos preditores disponíveis.
+
+```{r lib,warning=FALSE, message=FALSE}
+library(reshape2)
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(lattice)
+```
+
+```{r hist,warning=FALSE, message=FALSE}
+d = melt(select(pcancer, -train))
+ggplot(d,aes(x = value)) + 
+    facet_wrap(~variable, scales = "free_x") + 
+    geom_histogram()
+```
+
+## Passo 3: Formato dos dados 
+
+Identifique qualquer variável categórica e, se necessário, converta a coluna para um fator (R: as.factor)
+
+```{r}
+pcancer$ivs = as.factor(pcancer$ivs)
+pcancer$gleason = as.factor(pcancer$gleason)
+```
+
+## Passo 4: Transformação dos dados
+
+Identifique os dados que possuem muita assimetria (skewness) e transforme as variáveis de forma a obter dados mais perto de uma distribuição normal.
+Por exemplo, para assimetria positiva, (positive skewness), pode-se usar a transformação logarítmica.
+
+```{r}
+# Muito skew: Deve transformar preditores: vol, peso, hpb, pc
+# e a resposta psa
+# pgg45 tem valor zero então não transforma
+pcancer$vol = log(pcancer$vol)
+pcancer$peso = log(pcancer$peso)
+pcancer$hpb = log(pcancer$hpb)
+pcancer$pc = log(pcancer$pc)
+pcancer$psa = log(pcancer$psa)
+
+colnames(pcancer) = c("log.vol", "log.peso", "idade", "log.hpb", 
+                      "ivs", "log.pc", "gleason", "pgg45", "train", "log.psa")
+```
+
+## Passo 5: Dados de treino
+
+Isole os dados de treino (coluna train=TRUE).
+
+```{r}
+train = filter(pcancer, train==TRUE)
+train = select(train, -train)
+```
+
+## Passo 6: Verificação de correlações
+
+Produza gráficos de dispersão entre todas as variáveis para examinar correlações. (R: plot ou splom)
+
+Para se certificar da correlação entre variáveis, identifique os pares de variáveis que possuem correlação acima de 0,95. (R: cor).
+Uma correlação alta com log.psa identifica um preditor importante no modelo.
+Uma correlação alta entre preditores identifica colinearidade, um problema para certos tipos de modelos.
+Se houver colinearidade, teremos que tratar do problema durante a modelagem.
+Quais são suas conclusões sobre colinearidade entre preditores?
+
+```{r scatter,warning=FALSE, message=FALSE}
+splom(train)
+round(cor(select(train, -ivs, -gleason)),3)
+# 0.95 é o valor a partir do qual consideramos que há colinearidade demais
+round(cor(select(train, -ivs, -gleason)),3) > 0.95
+```
+
+```
+Gráfico: Parece haver alguma correlação, mas não acentuada
+Matriz de correlação: confima que parece haver alguma correlação, mas não acentuada
+Nenhuma correlação acentuada (r > 0.95)
+Não parece que tenhamos um problema grande de colinearidade.
+```
+
+## Passo 7: Representação visual de relacionamento simples
+
+Forneça um gráfico de dispersão separado entre log.vol e log.psa e interprete o gráfico.
+(os nomes log.vol e log.psa dão uma dica sobre algumas das transformações que deveriam ter sido feitas anteriormente.)
+
+```{r}
+p = ggplot(pcancer, aes(x=log.vol, y=log.psa)) +
+    geom_point(shape=1)
+p
+```
+
+```
+Interpretação: Parece have um relacionamento linear entre log.vol e log.psa
+```
+
+# Modelagem
+
+## Passo 8: primeiro modelo linear
+
+Crie um modelo de regressão linear entre log.vol e log.psa e inclua a linha de regressão no gráfico de dispersão e a região de confiança. (R: lm, coef, ggplot/geom_smooth)
+
+- Qual é o valor de $w_0$? Interprete este valor.
+- Qual é o valor de $w_1$? Interprete este valor.
+
+```{r}
+fit.lm = lm(log.psa ~ log.vol, data=pcancer)
+print(coef(fit.lm))
+p = p + geom_smooth(method=lm, se=TRUE)
+p
+```
+
+```
+beta_0 hat = 1.5072975
+É o interceto (ordenada na origem), o valor de log.psa quando log.vol = 0.
+beta_1 hat = 0.7193204
+É a inclinação da linha de regressão: para cada unidade de aumento em log.vol, log.psa cresce em 0.7193204 unidades.
+```
+
+## Passo 9: Outros resultados da regressão
+
+Imprime o sumário do seu modelo (R: summary) e interprete cada informação fornecida.
+
+```{r}
+print(summary(fit.lm))
+```
+
+```
+Residuals: fornecem o valor mínimo, primeiro quartil, mediana
+terceiro quartil e valor máximo dos resíduos da regressão
+A distribuição dos resíduos, tal como estimada com esses números,
+deve ser simétrica, a mediana deveria ser perto de 0, 
+Os valores de 1Q e 3Q deveriam ter valor absoluto semelhantes.
+Coefficients: fornecem os valores estimados de beta_0 hat e beta_1 hat
+(Estimate), o desvio padrão dos valores (Std. Error), 
+o valor t (t value) e o p-valor associado Pr(>|t|)
+O desvio padrão fornece uma estimativa da incerteza associada aos 
+coeficientes do modelo.
+A estatística t é igual ao coeficiente dividido pelo desvio padrão.
+Neste caso, com p-valor muito baixo, os dois coeficientes são estatisticamente significativos, isto é, diferentes de zero.
+Residual standard error: valor estimado do desvio padrão dos resíduos.
+R-squared: a fração da variância em log.psa explicada por log.vol
+Adjusted R-squared: igual a R-squared com ajuste pela complexidade 
+do modelo (o número de parâmetros).
+Não tem importância para um modelo tão simples com 1 preditor.
+F-statistic: a razão entre a variância explicada pelo modelo e a variância residual ou não explicada.
+Se este valor for alto (com p-valor baixo), significa que o modelo explica
+mais variância do que a não explicada.
+É o caso aqui.
+```
+
+## Passo 10: Examinar suposições da regressão linear
+
+Uma suposição da regressão linear é que os resíduos têm:
+
+- média 0 (sempre terão);
+- variância constante; e
+- distribuição normal.
+
+Use R para verificar as suposições.
+Dicas: variância constante: gráfico de dispersão de resíduos versus valores ajustados (fitted values); distribuição normal: qq-plot com qqnorm/qqline
+
+```{r}
+print(mean(fit.lm$residuals))
+```
+
+```
+Está bem perto de zero. OK.
+```
+
+```{r}
+require(ggplot2)
+p1 = ggplot(fit.lm, aes(.fitted, .resid)) +
+    geom_point()
+p1 = p1 + geom_hline(yintercept=0, col="red", linetype="dashed")
+p1 = p1 + xlab("Valores ajustados") + ylab("Resíduos")
+p1 = p1 + ggtitle("Gráfico de Resíduos vs Ajustamento") + 
+    theme_bw()
+p1
+```
+
+```{r}
+qqnorm(fit.lm$residuals)
+qqline(fit.lm$residuals, col = 2,lwd=2,lty=2)
+#p2 = ggplot(fit.lm, aes(qqnorm(.stdresid)[[1]], .stdresid)) +
+#    geom_point()
+#p2 = p2 + geom_abline(aes(qqline(.stdresid))) + 
+#    xlab("Quantis Teóricos") + 
+#    ylab("Resíduos padronizados")
+#p2 = p2 + ggtitle("Q-Q Normal") + 
+#    theme_bw()
+#p2
+```
+
+```
+Parece estar OK: sem padrao nos resíduos e qqplot bem ajustado à linha reta.
+```
+
+## Passo 11: Regressão múltipla
+
+Faça uma regressão de log.psa contra todos os preditores.
+
+- Qual é o coeficiente de log.vol?
+- É diferente do coeficiente descoberto na regressão univariada?
+- Por quê?
+- Interprete este novo coeficiente.
+
+```{r}
+fit.mult = lm(log.psa ~ ., data=train)
+print(coef(fit.mult)['log.vol'])
+summary(fit.mult)
+```
+
+```
+Coeficiente de log.vol: 0.5681132
+É diferente do coeficiente descoberto na regressão univariada.
+Porque há outros preditores explicando parte da variância, sobrando
+menos influência de log.vol
+Interpretação: para cada unidade de aumento de log.vol, log.psa aumenta
+em 0.5681132 unidades
+```
+
+
