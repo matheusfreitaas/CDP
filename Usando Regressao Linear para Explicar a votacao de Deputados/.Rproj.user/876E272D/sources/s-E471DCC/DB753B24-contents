@@ -1,0 +1,78 @@
+---
+title: 'Análise de Gastos de Deputados: Suas Perguntas'
+author: "Matheus Freitas"
+date: "5 de setembro de 2018"
+output: html_document
+---
+
+Utilizando os mesmos dados utilizados na análise anterior, Análise de Gastos de Deputados: Nossas Perguntas, temos agora como objetivo a criação de duas perguntas que utilizem medidas estatísticas e iremos responde-las ao longo dessa análise. 
+
+Não iremos introduzir os dados novamente, para qualquer explicação sobre o que está sendo trabalhado aqui, observar o [Análise de Gastos de Deputados: Nossas Perguntas](https://rpubs.com/matheusfreitaas/416584)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotly)
+library(lubridate)
+dados <- read.csv("data/dadosCEAP.csv")
+dados$valorGlosa <- as.numeric(sub(",", ".", dados$valorGlosa, fixed = TRUE))
+colnames(dados)[13]<- c("valorLiquido")
+```
+
+
+#Existe uma relação entre a média de gastos dos deputados de cada partido e o seu tamanho? 
+
+Podemos imaginar que os maiores partidos possuam um gasto médio maior do que os menores partidos, iremos analisar isso abaixo.
+
+```{r}
+gastos_deputado_partido <- dados %>%
+  select(sgPartido, valorLiquido, nomeParlamentar) %>%
+  group_by(nomeParlamentar, sgPartido) %>%
+  summarise(valorLiquido = sum(valorLiquido))
+
+gastos_medio_partido <- gastos_deputado_partido %>%
+  group_by(sgPartido) %>%
+  summarise(gastoMedio = mean(valorLiquido),
+            tamanhoPartido = n())
+
+plot_ly(data = gastos_medio_partido,
+        x = ~tamanhoPartido,
+        y = ~gastoMedio,
+        color = ~sgPartido,
+        type = "bar",
+        width = )
+
+
+```
+
+* Para analisar partidos especificos o usuário precisa apenas clicar em algum dos partidos listados ao lado do gráfico.
+
+* Consideramos aqui que o tamanho do partido é dado pela quantidade de Deputados do mesmo.
+
+Analisando este gráfico podemos afirmar que não existe uma relação entre o tamanho do partido e o seu gasto médio da CEAP, na verdade parece ser mais comum um maior gasto em partidos menores.
+
+#Qual a média de gastos mensais dos partidos na Paraíba?
+
+Estimamos uma média de cinco mil reais por mês para cada partido no Estado da Paraíba.
+
+```{r}
+gasto_mensal_paraiba <- dados %>%
+  select(sgPartido, dataEmissao, sgUF, valorLiquido) %>%
+  filter(sgUF == "PB")
+
+gasto_mensal_paraiba$dataEmissao <- date(gasto_mensal_paraiba$dataEmissao)
+gasto_mensal_paraiba$mes <- month(gasto_mensal_paraiba$dataEmissao)
+
+gasto_mensal_paraiba <- gasto_mensal_paraiba %>%
+  group_by(sgPartido) %>%
+  summarise(gastoMedio = mean(valorLiquido))
+
+ggplot(data = gasto_mensal_paraiba,
+       mapping = aes(x = sgPartido,
+                     y = gastoMedio,
+                     fill = sgPartido)) +
+  geom_bar(stat = "identity")
+
+
+```
+No gráfico acima podemos ver que a estimativa feita anteriormente não condiz com a realidade que varia, em geral, entre 600 até 1200 reais mensais. 

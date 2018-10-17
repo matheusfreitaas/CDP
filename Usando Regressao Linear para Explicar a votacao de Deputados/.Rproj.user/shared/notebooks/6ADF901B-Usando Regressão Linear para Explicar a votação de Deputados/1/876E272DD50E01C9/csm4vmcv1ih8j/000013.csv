@@ -1,0 +1,8 @@
+"0","ggplot(data = melted2006,
+       mapping = aes(x = value)) +
+  facet_wrap(~variable,
+             scales = ""free_x"") +
+  geom_histogram(binwidth = 0.01)
+"
+"2","
+"

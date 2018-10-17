@@ -1,0 +1,3 @@
+"0","round(cor(eleicoes2006,3))"
+"2","Error in cor(eleicoes2006, 3) : 'x' deve ser numérico
+"

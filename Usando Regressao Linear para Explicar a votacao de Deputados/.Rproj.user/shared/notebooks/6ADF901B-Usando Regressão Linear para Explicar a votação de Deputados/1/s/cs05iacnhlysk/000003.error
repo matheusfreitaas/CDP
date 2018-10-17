@@ -1,0 +1,1 @@
+{"frames":[{"character_number":0,"end_character_number":0,"end_line_number":0,"file":"","func":"cor(eleicoes2006, 3)","line_number":0},{"character_number":0,"end_character_number":0,"end_line_number":0,"file":"","func":"stop(\"'x' must be numeric\")","line_number":0}],"message":"Error in cor(eleicoes2006, 3) : 'x' deve ser numérico\n"}

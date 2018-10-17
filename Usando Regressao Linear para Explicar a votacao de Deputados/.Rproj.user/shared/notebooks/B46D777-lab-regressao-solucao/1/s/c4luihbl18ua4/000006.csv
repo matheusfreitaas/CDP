@@ -1,0 +1,8 @@
+"0","#p2 = ggplot(fit.lm, aes(qqnorm(.stdresid)[[1]], .stdresid)) +"
+"0","#    geom_point()"
+"0","#p2 = p2 + geom_abline(aes(qqline(.stdresid))) + "
+"0","#    xlab(""Quantis Teóricos"") + "
+"0","#    ylab(""Resíduos padronizados"")"
+"0","#p2 = p2 + ggtitle(""Q-Q Normal"") + "
+"0","#    theme_bw()"
+"0","#p2"

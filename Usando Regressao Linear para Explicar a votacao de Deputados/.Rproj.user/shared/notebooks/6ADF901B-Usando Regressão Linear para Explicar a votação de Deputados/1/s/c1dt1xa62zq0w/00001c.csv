@@ -1,0 +1,8 @@
+"0","melted2010 = melt(select(eleicoes2010, -ano))"
+"2","Using sequencial_candidato, nome, uf, partido, cargo, sexo, grau, estado_civil, ocupacao as id variables
+"
+"0","ggplot(data = melted2006,"
+"0","       mapping = aes(x = value)) +"
+"0","  facet_wrap(~variable,"
+"0","             scales = ""free_x"") +"
+"0","  geom_histogram()"

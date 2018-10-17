@@ -1,0 +1,7 @@
+"2","Warning in gzfile(file, ""wb"") :"
+"2","
+ "
+"2"," cannot open compressed file 'C:/Users/Matheus Freitas/Desktop/CDP/Usando Regressao Linear para Explicar a votacao de Deputados/.Rproj.user/shared/notebooks/6ADF901B-Usando Regressão Linear para Explicar a votação de Deputados/1/876E272D618811CB/c1dt1xa62zq0w_t/5b98b66467b84b339031d939980eb132.snapshot', probable reason 'No such file or directory'
+"
+"2","Error in gzfile(file, ""wb"") : cannot open the connection
+"

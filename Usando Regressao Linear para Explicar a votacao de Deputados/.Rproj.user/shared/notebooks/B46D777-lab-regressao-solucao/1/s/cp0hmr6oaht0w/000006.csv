@@ -1,0 +1,4 @@
+"0","d = melt(select(pcancer, -train))"
+"0","ggplot(d,aes(x = value)) + "
+"0","    facet_wrap(~variable, scales = ""free_x"") + "
+"0","    geom_histogram()"
