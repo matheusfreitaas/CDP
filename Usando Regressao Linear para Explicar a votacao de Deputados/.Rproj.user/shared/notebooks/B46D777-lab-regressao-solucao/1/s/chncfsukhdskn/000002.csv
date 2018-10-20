@@ -1,0 +1,2 @@
+"0","pcancer$ivs = as.factor(pcancer$ivs)"
+"0","pcancer$gleason = as.factor(pcancer$gleason)"

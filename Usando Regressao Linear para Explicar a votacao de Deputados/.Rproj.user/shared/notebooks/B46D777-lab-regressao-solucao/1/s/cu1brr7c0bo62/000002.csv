@@ -1,0 +1,2 @@
+"0","DATA.FILE = 'cancer_data.csv'"
+"0","pcancer = read.csv(DATA.FILE, header=TRUE, quote='""')"

@@ -1,0 +1,8 @@
+"0","require(ggplot2)"
+"0","p1 = ggplot(fit.lm, aes(.fitted, .resid)) +"
+"0","    geom_point()"
+"0","p1 = p1 + geom_hline(yintercept=0, col=""red"", linetype=""dashed"")"
+"0","p1 = p1 + xlab(""Valores ajustados"") + ylab(""Resíduos"")"
+"0","p1 = p1 + ggtitle(""Gráfico de Resíduos vs Ajustamento"") + "
+"0","    theme_bw()"
+"0","p1"
