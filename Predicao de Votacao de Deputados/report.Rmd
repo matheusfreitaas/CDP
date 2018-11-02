@@ -1,0 +1,134 @@
+---
+title: "Predição de Votação de Deputados"
+author: "Matheus Freitas"
+date: "31 de outubro de 2018"
+output: html_document
+---
+
+#Descrição dos dados e arquivos
+
+Abaixo estão descritos os arquivos necessários durante esta competição. São eles:
+
+* train.csv: Este é o conjunto de treino que será utilizado para treinar o modelo. Para o treino serão utilizados os dados das eleições dos anos de 2006 e 2010;
+
+* test.csv: Este é o conjunto de teste, usado para validar o modelo. Para isso, será usada uma parte dos dados das eleições de 2014;
+
+##Dados
+
+Os dados utilizados correspondem aos das eleições de Deputado Federal nos anos de 2006, 2010 e 2014. Estão dividos nas seguintes colunas:
+
+* ano: Ano da eleição;
+* sequencial_candidato: O identificador do candidato. Corresponde à coluna ID do arquivo de submissão;
+* nome: Nome do candidato;
+* uf: Sigla do estado do candidato;
+* partido: Partido do candidato;
+* quantidade_doacoes: Número de doações que um candidato recebeu;
+* quantidade_doadores: Numero de doadores que um candidato teve;
+* total_receita: Total de receita de um candidato;
+* media_receita: Média da receita de um candidato;
+* recursos_de_outros_candidatos.comites: Total de receita proveniente de outros candidatos e comitês;
+* recursos_de_pessoas_fisicas: Total de receita proveniente de pessoas físicas;
+* recursos_de_pessoas_juridicas: Total de receita proveniente de pessoas juridicas;
+* recursos_proprios:Total de receita proveniente dos próprios candidatos;
+* recursos_de_partido_politico: Total de receita proveniente do partido do candidato;
+* quantidade_despesas: Número de despesas que um candidato teve;
+* quantidade_fornecedores: Número de fornecedores que um candidato teve;
+* total_despesa: Total de depesa de um candidato;
+* media_despesa: Média da despesa de um candidato;
+* cargo: Cargo ao qual o candidato está concorrendo;
+* sexo: Sexo do candidato;
+* grau: Grau de escolaridade do candidato;
+* estado_civil: Estado civil do candidato;
+* ocupacao: Ocupação do candidato;
+* votos: Número de votos do candidato.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(dplyr)
+library(tidyverse)
+
+data = read.csv("data/train.csv")
+data <- select(data, -cargo, -nome, -ocupacao)
+  
+data_train <- sample_frac(data, 0.75)
+data_train_test <- setdiff(data, data_train)
+```
+
+Para os modelos de regressão a seguir iremos retirar as seguinte variáveis:
+
+* Cargo: Pois todos se tratam do mesmo cargo de Deputado Federal.
+* Ocupação: Pois ao tentarmos executar o modelo com as ocupações recebemos a informação de que essa variável não apresenta variância.
+* Nome: Pois ao tentarmos executar o modelo com as ocupações recebemos a informação de que essa variável não apresenta variância.
+
+#Modelo Utilizando Regressão Ridge
+
+```{r}
+
+fitControlRidge <- trainControl(
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 10,
+                           search = "random")
+
+lambdaGridRidge <- expand.grid(lambda = 5) #como escolher um bom lambda? precisa colocar isso? 
+
+ridgeModel <- train(votos ~ ., 
+               data = data_train,
+               method = "ridge",
+               trControl = fitControlRidge,
+               preProcess = c('scale', 'center'),
+               na.action = na.omit)
+ridgeModel
+
+ggplot(varImp(ridgeModel))
+```
+
+#Modelo Utilizando Regressão Lasso
+
+```{r}
+fitControlLasso <- trainControl(
+                           method = "cv",
+                           number = 10,
+                           repeats = 10)
+
+lambdaGridLasso <- expand.grid(lambda = 5) #como escolher um bom lambda? precisa colocar isso? 
+
+lassoModel <- train(votos ~ ., 
+               data = data_train,
+               method = "lasso",
+               trControl = fitControlLasso,
+               preProcess = c('scale', 'center'),
+               na.action = na.omit)
+
+lassoModel
+
+ggplot(varImp(lassoModel))
+```
+
+#Modelo Utilizando KNN
+
+```{r}
+#Como? 
+```
+
+
+#Qual o melhor dos três modelos? 
+
+Compare os três modelos em termos do erro RMSE de validação cruzada.
+
+Quais as variáveis mais importantes segundo o modelo de regressão Ridge e Lasso?  Variáveis foram descartadas pelo Lasso? Quais?
+
+
+#Prever dados de teste
+```{r}
+data_test <- read.csv("data/test.csv")
+
+#predictions <- predict(model.cv, mtcars)
+
+#predictions
+
+```
+
+
